@@ -33,3 +33,142 @@ curl --location 'http://localhost:8080/SmartCampusApi/api/v1/rooms' \
 --header 'Content-Type: application/json' \
 --data '{"id": "1","name": "Lab","capacity": 30}
 
+### Create a Sensor 
+curl --location 'http://localhost:8080/SmartCampusApi/api/v1/sensors' \
+--header 'Content-Type: application/json' \
+--data '{"id": "S1","type": "CO2","status": "ACTIVE","currentValue": 0,"roomId": 1}'
+
+### Add a Reading
+curl --location 'http://localhost:8080/SmartCampusApi/api/v1/sensors/S1/readings' \
+--header 'Content-Type: application/json' \
+--data '{"id": "R1","timestamp": 1710000000,"value": 45.5}'
+
+### Invalid Sensor Creation(422 Error)
+curl --location 'http://localhost:8080/SmartCampusApi/api/v1/sensors' \
+--header 'Content-Type: application/json' \
+--data '{"id": "S99","type": "CO2","status": "ACTIVE","currentValue": 0,"roomId": 999}'
+This request fails because the roomId does not exist.The Api returns a 422 Unprocessable Entity error.
+
+## Error Handling
+The API also has error handling using custom exception types and mappers (proper) to provide meaningful HTTP status codes:
+- 404 Not Found
+  .Resource is non-existent.
+- 409 Conflict
+  . A Room cannot be removed if there are Sensors associated with it.
+- 422 Unprocessable Entity
+  .When a new Sensor is created, an invalid Room Reference was provided for that Sensor creation request.
+
+- 403 Forbidden
+  .If a Sensor in Maintenance mode attempts to receive readings then this will result in a 403 Forbidden response from the server.
+
+- 500 Internal Server Error
+  . All other unexpected errors result in a 500 Internal Server Error response
+
+
+ ## Coursework Questions
+
+### Part 1
+
+#### Question:
+
+In your report, explain the default lifecycle of a JAX-RS Resource class. Is a new instance instantiated for every incoming request, or does the runtime treat it as a singleton? Elaborate on how this architectural decision impacts the way you manage and synchronize your in-memory data structures.
+
+#### Answer:
+
+By default, JAX-RS resource classes are created per request, meaning a new instance is instantiated for each incoming request.Therefore, due to this approach of thread safety (each request is processed independently) we cannot utilize in-memory HashMaps like DataStore and need to store shared data in static classes. If the JAX-RS Resource Classes were singletons we would have had to take great care to ensure synchronization to prevent race conditions
+
+#### Question:
+
+Why is the provision of Hypermedia (HATEOAS) considered a hallmark of advanced RESTful design? How does this approach benefit client developers compared to static documentation?s
+
+
+#### Answer:
+
+Hypermedia provides a way for APIs to provide links to related resources in their responses. Therefore, hypermedia enables the client to discover the available resources and navigate the API at runtime without having to reference hard-coded URLs. In addition to being more dynamic and flexible than statically documented APIs, using hypermedia also improves usability for developers.
+
+
+### Part 2
+
+#### Question:
+
+When returning a list of rooms, what are the implications of returning only IDs versus returning the full room objects?
+
+#### Answer:
+
+
+
+#### Question:
+
+Is the DELETE operation idempotent in your implementation? Provide a detailed justification.
+
+#### Answer:
+
+Yes, DELETE is idempotent. When a room is deleted, repeating the same DELETE request does not change the outcome further. The room remains deleted, and subsequent requests may return a “not found” response. This ensures consistency in system behaviour.
+
+---
+
+### Part 3
+
+#### Question:
+
+Explain the technical consequences if a client sends data in a different format (e.g., text/plain or application/xml) when the method expects JSON.
+
+#### Answer:
+
+If a client sends data in a format other than JSON, JAX-RS will not match the request to the method annotated with @Consumes(MediaType.APPLICATION_JSON). This results in a 415 Unsupported Media Type error, as the server cannot process the request.
+
+---
+
+#### Question:
+
+Why is using @QueryParam for filtering considered better than including the filter in the path?
+
+#### Answer:
+
+Using query parameters allows more flexible and scalable filtering. Multiple filters can be applied easily, and the endpoint remains clean. Path parameters are better suited for identifying specific resources, not filtering collections.
+
+---
+
+### Part 4
+
+#### Question:
+
+Discuss the architectural benefits of the Sub-Resource Locator pattern.
+
+#### Answer:
+
+The Sub-Resource Locator pattern improves code organization by separating logic into different classes. This reduces complexity and makes the system easier to maintain. It allows better scalability compared to having all endpoints in a single large class.
+
+---
+
+### Part 5
+
+#### Question:
+
+Why is HTTP 422 more semantically accurate than 404 when the issue is a missing reference inside a valid JSON payload?
+
+#### Answer:
+
+HTTP 422 is used when the request is syntactically correct but contains invalid data, such as referencing a room that does not exist. A 404 indicates that the resource itself is missing, while 422 indicates a problem with the request data.
+
+---
+
+#### Question:
+
+From a cybersecurity standpoint, explain the risks of exposing stack traces.
+
+#### Answer:
+
+Exposing stack traces reveals sensitive internal information such as class names, file paths, and system structure. Attackers can use this information to identify vulnerabilities and exploit the system. Therefore, it is safer to return generic error messages.
+
+---
+
+#### Question:
+
+Why is it advantageous to use JAX-RS filters for logging instead of adding logging in every method?
+
+#### Answer:
+
+Filters allow logging to be handled in one centralized place for all requests and responses. This avoids repetitive code and ensures consistency. It also makes the application easier to maintain and extend.
+
+
